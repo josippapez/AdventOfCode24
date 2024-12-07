@@ -17,38 +17,21 @@ const check = (previous, current) => {
   };
 };
 
-const checkDescending = (line, dampen = 0) => {
+const checkOrder = (line, compareFunc, dampen = 0) => {
   return line.every((number, index, array) => {
     if (index === 0) return true;
     const isValid = check(array[index - 1], number);
-    if (isValid.isSmaller) return true;
+    if (compareFunc(isValid)) return true;
     if (dampen >= 1) return false;
     return (
-      checkDescending(
-        [...array].filter((_, i) => i !== index),
+      checkOrder(
+        [...array].filter((_, i) => i !== index - 1),
+        compareFunc,
         dampen + 1
       ) ||
-      checkDescending(
-        [...array].filter((_, i) => i !== index - 1),
-        dampen + 1
-      )
-    );
-  });
-};
-
-const checkAscending = (line, dampen = 0) => {
-  return line.every((number, index, array) => {
-    if (index === 0) return true;
-    const isValid = check(array[index - 1], number);
-    if (isValid.isBigger) return true;
-    if (dampen >= 1) return false;
-    return (
-      checkAscending(
-        [...array].filter((_, i) => i !== index - 1),
-        dampen + 1
-      ) ||
-      checkAscending(
+      checkOrder(
         [...array].filter((_, i) => i !== index),
+        compareFunc,
         dampen + 1
       )
     );
@@ -60,7 +43,10 @@ const part2 = () => {
   lines.forEach(line => {
     const parsedLine = line.split(" ").map(Number);
 
-    if (checkDescending(parsedLine) || checkAscending(parsedLine)) {
+    if (
+      checkOrder(parsedLine, isValid => isValid.isSmaller) ||
+      checkOrder(parsedLine, isValid => isValid.isBigger)
+    ) {
       sum++;
     }
   });

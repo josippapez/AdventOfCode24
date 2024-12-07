@@ -23,6 +23,14 @@ orderingRules.forEach(([a, b]) => {
   mapOfAfterRules.get(b).push(a);
 });
 
+const isValidPage = (page, pageOrder, j) => {
+  if (!mapOfOrderingRules.has(page) && mapOfAfterRules.has(page)) return true;
+  if (j === 0 && mapOfOrderingRules.get(page)?.includes(pageOrder[j + 1])) return true;
+  if (j === pageOrder.length - 1 && !mapOfOrderingRules.get(page)?.includes(pageOrder[j - 1])) return true;
+  if (!mapOfOrderingRules.get(page).includes(pageOrder[j - 1]) && mapOfOrderingRules.get(page).includes(pageOrder[j + 1])) return true;
+  return false;
+};
+
 const checkOrder = () => {
   const result = [[]];
 
@@ -30,26 +38,11 @@ const checkOrder = () => {
     result.push([]);
 
     pageOrder.forEach((page, j) => {
-      if (!mapOfOrderingRules.has(page) && mapOfAfterRules.has(page))
-        return result[i].push(page);
-      if (j === 0 && mapOfOrderingRules.get(page)?.includes(pageOrder[j + 1])) {
-        return result[i].push(page);
+      if (isValidPage(page, pageOrder, j)) {
+        result[i].push(page);
+      } else {
+        result[i].push("invalid");
       }
-      if (
-        j === pageOrder.length - 1 &&
-        !mapOfOrderingRules.get(page)?.includes(pageOrder[j - 1])
-      ) {
-        return result[i].push(page);
-      }
-
-      if (
-        !mapOfOrderingRules.get(page).includes(pageOrder[j - 1]) &&
-        mapOfOrderingRules.get(page).includes(pageOrder[j + 1])
-      ) {
-        return result[i].push(page);
-      }
-
-      result[i].push("invalid");
     });
   });
 
@@ -58,37 +51,31 @@ const checkOrder = () => {
 
 const result = checkOrder();
 
+const calculateRankings = (tempOrder, rankings, i) => {
+  tempOrder.forEach((page) => {
+    if (mapOfOrderingRules.has(page)) {
+      mapOfOrderingRules.get(page).forEach((afterPage) => {
+        if (!rankings[i]) rankings[i] = {};
+        if (!rankings[i][page]) rankings[i][page] = 0;
+        if (tempOrder.includes(afterPage)) rankings[i][page]++;
+      });
+    } else if (mapOfAfterRules.has(page)) {
+      mapOfAfterRules.get(page).forEach((beforePage) => {
+        if (!rankings[i]) rankings[i] = {};
+        if (!rankings[i][page]) rankings[i][page] = 0;
+        if (tempOrder.includes(beforePage)) rankings[i][page]--;
+      });
+    }
+  });
+};
+
 const orderInvalidInputsCorrectly = () => {
   const rankings = [];
   result.forEach((pageOrder, i) => {
     if (!pageOrder.includes("invalid")) return;
 
     const tempOrder = [...order[i]];
-
-    tempOrder.forEach((page, k) => {
-      // go through each page, check the ranking of a page by checking the number of pages it comes before, the higher the number the higher the ranking.
-      // if the number is not in mapOfOrderingRule then check in mapOfAfterRules then it goes in the opposite direction (lower ranking)
-
-      if (mapOfOrderingRules.has(page)) {
-        mapOfOrderingRules.get(page).forEach((afterPage, l) => {
-          if (!rankings[i]) {
-            rankings[i] = {};
-          }
-          if (!rankings[i][page]) rankings[i][page] = 0;
-
-          if (tempOrder.includes(afterPage)) rankings[i][page]++;
-        });
-      } else if (mapOfAfterRules.has(page)) {
-        mapOfAfterRules.get(page).forEach((beforePage, l) => {
-          if (!rankings[i]) {
-            rankings[i] = {};
-          }
-          if (!rankings[i][page]) rankings[i][page] = 0;
-
-          if (tempOrder.includes(beforePage)) rankings[i][page]--;
-        });
-      }
-    });
+    calculateRankings(tempOrder, rankings, i);
   });
 
   return result
@@ -106,7 +93,7 @@ const part2 = () => {
   let sum = 0;
   const filteredResults = orderInvalidInputsCorrectly();
 
-  filteredResults.forEach((ranking, i) => {
+  filteredResults.forEach((ranking) => {
     const pageOrderLength = ranking.length;
     if (pageOrderLength % 2 === 0) return;
     sum += ranking[Math.floor(pageOrderLength / 2)];
